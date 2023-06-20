@@ -15,6 +15,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 events = boto3.client("events", config=session_config)
 dynamodb = boto3.resource("dynamodb", config=session_config)
+ssm = boto3.client("ssm", config=session_config)
 dataset_table = dynamodb.Table("octagon-Datasets-{}".format(os.environ["ENV"]))
 pipeline_table = dynamodb.Table("octagon-Pipelines-{}".format(os.environ["ENV"]))
 
@@ -100,7 +101,8 @@ def lambda_handler(event, context):
             entries = events.put_events(
                 Entries=[
                     {"Source": "sdlf.s3", "DetailType": "SdlfObjectInS3", "Detail": json.dumps(message)},
-                ]
+                ],
+                EventBusName=ssm.get_parameter(Name=f"/SDLF/EventBridge/{team}/EventBusArn")["Parameter"]["Value"]
             )
 
             if entries["FailedEntryCount"] > 0:
